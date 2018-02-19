@@ -1,23 +1,35 @@
+#[macro_use]
+extern crate prettytable;
 extern crate reqwest;
 extern crate scraper;
 
+use prettytable::Table;
+use std::fs::File;
 use scraper::{Html, Selector};
 use reqwest::Client;
 
 
 fn main() {
+    let mut table = Table::new();
+    let out = File::create("./out.txt").unwrap();
+
     let domain: &str = "https://www.yelp.com";
     let init_query: &str = "/search?find_desc=Food&find_loc=San+Francisco,+CA";
+    
     let mut yelp_business_links = vec![];
     let client = Client::new();
     get_yelp_index_links(&client, domain, init_query, &mut yelp_business_links);
 
     for link in yelp_business_links {
-        creep_on_business(&client, &link);
+        let num = creep_on_business(&client, &link.1);
+        table.add_row(row![link.0, link.1, num]);
     }
+
+    table.printstd();
+    table.to_csv(out).unwrap();
 }
 
-fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: &mut Vec<String>) {
+fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: &mut Vec<(String, String)>) {
     let url = domain.to_owned() + query;
     let mut resp = client.get(&url).send().unwrap();
     assert!(resp.status().is_success());
@@ -27,27 +39,26 @@ fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: 
     let businesses = Selector::parse("span.indexed-biz-name > a.biz-name").unwrap();
 
     for business in fragment.select(&businesses) {
-        // let business_name = business.text().collect::<Vec<_>>();
+        let business_name = business.text().collect::<Vec<_>>()[0].trim();
 
         // get the business's yelp page
         let mut rel_path = business.value().attr("href").unwrap();
         let end_index = rel_path.rfind('?').unwrap();
         let business_yelp_link = domain.to_owned() + &rel_path[0..end_index];
-        yelp_links.push(business_yelp_link);
+        yelp_links.push((business_name.to_owned(), business_yelp_link));
     }
 
     // do it again on the next page
     let next_page_selector = Selector::parse("div.arrange_unit > a.next.pagination-links_anchor").unwrap();
     for next_page_link in fragment.select(&next_page_selector) {
         let rel = next_page_link.value().attr("href").unwrap();
-        println!("next: {}", rel);
         get_yelp_index_links(client, domain, &rel, yelp_links);
     }
 }
 
-fn creep_on_business(client: &Client, yelp_business_page_url: &str) {
+fn creep_on_business(client: &Client, yelp_business_page_url: &str) -> u32 {
     // get # of reviews with our keywords
-    search_reviews(client, yelp_business_page_url);
+    search_reviews(client, yelp_business_page_url)
 
     // let mut resp = client.get(yelp_business_page_url).send().unwrap();
     // let body = resp.text().unwrap();

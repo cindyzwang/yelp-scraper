@@ -21,7 +21,7 @@ Badabing, badaboom
 ### v0.0.1 MVP:
 - [x] comb through all of the index links for a given query
 - [x] scrape yelp reviews
-- [ ] print to txt file
+- [x] print to txt file
 
 
 ### v0.1.0 MVP:
