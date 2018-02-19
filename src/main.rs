@@ -36,7 +36,7 @@ fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: 
 
     let body = resp.text().unwrap();
     let fragment = Html::parse_document(&body);
-    let businesses = Selector::parse("span.indexed-biz-name > a.biz-name").unwrap();
+    let businesses = Selector::parse("li.regular-search-result a.biz-name").unwrap();
 
     for business in fragment.select(&businesses) {
         let business_name = business.text().collect::<Vec<_>>()[0].trim();
@@ -49,7 +49,7 @@ fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: 
     }
 
     // do it again on the next page
-    let next_page_selector = Selector::parse("div.arrange_unit > a.next.pagination-links_anchor").unwrap();
+    let next_page_selector = Selector::parse("div.search-pagination a.next.pagination-links_anchor").unwrap();
     for next_page_link in fragment.select(&next_page_selector) {
         let rel = next_page_link.value().attr("href").unwrap();
         get_yelp_index_links(client, domain, &rel, yelp_links);
