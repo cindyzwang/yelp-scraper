@@ -25,7 +25,4 @@ Badabing, badaboom
 
 
 ### v0.1.0 MVP:
-- [ ] accept arguments at run time: ~~initial url~~, ~~output path~~, keywords
-
-### v0.2.0 MVP:
-- [ ] scrape the company's website
+- [x] accept arguments at run time: initial url, output path, keywords

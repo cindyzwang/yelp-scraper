@@ -20,13 +20,24 @@ fn main() {
                             .long("url")
                             .value_name("URL")
                             .help("The url you get when you make a search on yelp. Please wrap in quotation marks")
-                            .required(true))
+                            .required(true)
+                            .takes_value(true))
                     .arg(Arg::with_name("output")
                             .short("o")
                             .long("output")
                             .value_name("OUTPUT PATH")
                             .help("Where you want the output file to go")
-                            .required(false))
+                            .required(false)
+                            .takes_value(true))
+                    .arg(Arg::with_name("keywords")
+                            .short("k")
+                            .long("keywords")
+                            .value_name("KEYWORDS")
+                            .help("Keywords to scrape reviews for")
+                            .multiple(true)
+                            .value_delimiter(",")
+                            .required(false)
+                            .takes_value(true))
                     .get_matches();
     
     let domain: &str = "https://www.yelp.com";
@@ -36,22 +47,30 @@ fn main() {
 
     let out_path = matches.value_of("output").unwrap_or("./out.txt");
 
+    let keywords_arg = matches.values_of("keywords");
+    let keywords = match keywords_arg {
+        Some(v) => v.collect::<Vec<_>>(),
+        None => vec!["fundraise", "nonprofit", "non-profit", "charity"],
+    };
+
     let mut table = Table::new();
-    let out = File::create(out_path).unwrap();
+    let mut out = File::create(out_path).unwrap();
 
     let mut yelp_business_links = vec![];
     let client = Client::new();
     get_yelp_index_links(&client, domain, init_query, &mut yelp_business_links);
 
     for link in yelp_business_links {
-        let num = creep_on_business(&client, &link.1);
+        let num = search_reviews(&client, &link.1, &keywords);
         table.add_row(row![link.0, link.1, num]);
     }
 
     table.printstd();
     table.to_csv(out).unwrap();
+    println!("Search Yelp reviews for keywords: {:?}", keywords);
     println!("Output file at {}", out_path);
 }
+
 
 fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: &mut Vec<(String, String)>) {
     let url = domain.to_owned() + query;
@@ -80,27 +99,8 @@ fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: 
     }
 }
 
-fn creep_on_business(client: &Client, yelp_business_page_url: &str) -> u32 {
-    // get # of reviews with our keywords
-    search_reviews(client, yelp_business_page_url)
 
-    // let mut resp = client.get(yelp_business_page_url).send().unwrap();
-    // let body = resp.text().unwrap();
-    // let fragment = Html::parse_document(&body);
-
-    // let address_selector = Selector::parse("div.mapbox-text > ul > li > span.biz-website").unwrap();
-    // for addr in fragment.select(&address_selector) {
-    //     // crawl
-    // }
-}
-
-// fn crawl_website() {
-//     // search for ["fundraise", "event"]
-// }
-
-fn search_reviews(client: &Client, yelp_business_page_url: &str) -> u32 {
-    let keywords = ["fundraise", "nonprofit", "non%20profit", "non-profit", "charity"];
-
+fn search_reviews(client: &Client, yelp_business_page_url: &str, keywords: &Vec<&str>) -> u32 {
     let mut count: u32 = 0;
     for keyword in keywords.iter() {
         let url = yelp_business_page_url.to_owned() + "?q=" + keyword;
