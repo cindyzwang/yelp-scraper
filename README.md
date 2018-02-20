@@ -13,6 +13,12 @@ Search for something on Yelp. The URL you get on the resulting index page gets u
 2. Sums the # of reviews that contain my keywords
 3. Makes a table and prints it to a text file
 
+## Directions
+The URL is **required**. The other arguments and their defaults are listed below. *Note*: URL has to be wrapped in quotation marks and if you want multiword keywords, wrap it in quotation marks (e.g. `--keywords=fundraise,"bob ross",charity`)
+```
+cargo run -- --url="<some yelp url you get when you search for something>" --keywords=fundraise,nonprofit,charity --out=./out.txt
+```
+
 Badabing, badaboom
 
 

@@ -3,9 +3,12 @@ extern crate prettytable;
 extern crate reqwest;
 extern crate scraper;
 extern crate clap;
+extern crate indicatif;
 
 use clap::{Arg, App};
+use indicatif::ProgressBar;
 use std::fs::File;
+use std::io::Write;
 use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
@@ -41,7 +44,13 @@ fn main() {
                     .get_matches();
     
     let domain: &str = "https://www.yelp.com";
-    let url = matches.value_of("url").unwrap();
+    let url_arg = matches.value_of("url").unwrap();
+    // strip off the "&ns=1"
+    let url = match url_arg.rfind("&ns=1") {
+        Some(v) => &url_arg[..v],
+        None => url_arg,
+    };
+
     let start_index = url.find("/search?").unwrap();
     let init_query = &url[start_index..];
 
@@ -50,7 +59,7 @@ fn main() {
     let keywords_arg = matches.values_of("keywords");
     let keywords = match keywords_arg {
         Some(v) => v.collect::<Vec<_>>(),
-        None => vec!["fundraise", "nonprofit", "non-profit", "charity"],
+        None => vec!["fundraise", "nonprofit", "charity"],
     };
 
     let mut table = Table::new();
@@ -60,14 +69,19 @@ fn main() {
     let client = Client::new();
     get_yelp_index_links(&client, domain, init_query, &mut yelp_business_links);
 
+    println!();
+    let bar = ProgressBar::new(yelp_business_links.len() as u64);
     for link in yelp_business_links {
         let num = search_reviews(&client, &link.1, &keywords);
         table.add_row(row![link.0, link.1, num]);
+        bar.inc(1);
     }
+    bar.finish();
 
     table.printstd();
+    write!(out, "{:?}\n", keywords).unwrap();
     table.to_csv(out).unwrap();
-    println!("Search Yelp reviews for keywords: {:?}", keywords);
+    println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
     println!("Output file at {}", out_path);
 }
 
