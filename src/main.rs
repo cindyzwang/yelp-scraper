@@ -61,7 +61,7 @@ fn main() {
     let keywords_arg = matches.values_of("keywords");
     let keywords = match keywords_arg {
         Some(v) => v.collect::<Vec<_>>(),
-        None => vec!["fundraise", "nonprofit", "charity"],
+        None => vec!["fundraise", "charity"],
     };
 
     let mut table = Table::new();

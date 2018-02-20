@@ -18,7 +18,7 @@ Make your time tradeoffs wisely when choosing your initial query and keywords:
 ## Directions
 The URL is **required**. The other arguments and their defaults are listed below. *Note*: URL has to be wrapped in quotation marks and if you want multiword keywords, wrap it in quotation marks (e.g. `--keywords=fundraise,"bob ross",charity`)
 ```
-cargo run -- --url="<some yelp url you get when you search for something>" --keywords=fundraise,nonprofit,charity --out=./out.txt
+cargo run -- --url="<some yelp url you get when you search for something>" --keywords=fundraise,charity --out=./out.txt
 ```
 Badabing, badaboom
 
