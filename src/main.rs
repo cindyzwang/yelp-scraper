@@ -47,8 +47,8 @@ fn main() {
     let url_arg = matches.value_of("url").unwrap();
     // strip off the "&ns=1"
     let url = match url_arg.rfind("&ns=1") {
-        Some(v) => &url_arg[..v],
-        None => url_arg,
+        Some(v) => url_arg[..v].to_owned() + "&rpp=40",
+        None => url_arg.to_owned() + "&rpp=40",
     };
 
     let start_index = url.find("/search?").unwrap();

@@ -7,8 +7,10 @@ Search for something on Yelp, you will get a URL with all of your search paramat
 Combing through Yelp to find nonprofit-friendly businesses to partner with is a pain in the ass. Also, trying to learn Rust.
 
 ## Bottlenecks
-* Pagination: one HTTP request per page of results. Yelp sets 10 items per page, max 100 pages -> 100 requests to just get the business links
-* Yelp review queries: as far as I can tell, Yelp doesn't support anything more than basic `contains` queries. So I can't search for reviews that contain `fundraise OR charity`. Have to do each individually
+Make your time tradeoffs wisely when choosing your initial query and keywords:
+* Pagination: one HTTP request per page of results. Yelp sets 10 items per page, I set `rpp=40` to get 40, max 1000 businesses are returned -> up to 25 requests to just get the business links
+* Each business page gets a request -> up to 1000
+* Yelp review queries: as far as I can tell, Yelp doesn't support anything more than basic `contains` queries. So I can't search for reviews that contain `fundraise OR charity`. Have to do each individually -> <num_businesses> x <num_keywords> requests
 
 ## Resources
 * [This](https://codeburst.io/web-scraping-in-rust-881b534a60f7) got me off the ground
