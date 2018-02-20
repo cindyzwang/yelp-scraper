@@ -1,26 +1,24 @@
-the grim scraper...in RUST!
+## What it do
+TL;DR: Scrape through Yelp reviews for keywords, count em up, get a list.
+
+Search for something on Yelp, you will get a URL with all of your search paramaters (`...yelp.com/search?...`). This will start there, grab all of the links to the individual business pages on Yelp, then go to those pages and search the reviews for different keywords. It'll will count how many reviews pop up for each keyword. *I know* that this isn't a perfect count but as far as I can tell, it searches for reviews that contain your whole query. If I *could* do one query that `OR`s my keywords, I *would*. But as it stands, I can't, so this has to make *a lot* of HTTP requests.
 
 ## Motivation
 Combing through Yelp to find nonprofit-friendly businesses to partner with is a pain in the ass. Also, trying to learn Rust.
 
+## Bottlenecks
+* Pagination: one HTTP request per page of results. Yelp sets 10 items per page, max 100 pages -> 100 requests to just get the business links
+* Yelp review queries: as far as I can tell, Yelp doesn't support anything more than basic `contains` queries. So I can't search for reviews that contain `fundraise OR charity`. Have to do each individually
+
 ## Resources
-* https://codeburst.io/web-scraping-in-rust-881b534a60f7
-
-
-## Description
-Search for something on Yelp. The URL you get on the resulting index page gets used as the initial URL this starts scraping from. Then it will:
-1. Collect all of the links for those business's yelp pages
-2. Sums the # of reviews that contain my keywords
-3. Makes a table and prints it to a text file
+* [This](https://codeburst.io/web-scraping-in-rust-881b534a60f7) got me off the ground
 
 ## Directions
 The URL is **required**. The other arguments and their defaults are listed below. *Note*: URL has to be wrapped in quotation marks and if you want multiword keywords, wrap it in quotation marks (e.g. `--keywords=fundraise,"bob ross",charity`)
 ```
 cargo run -- --url="<some yelp url you get when you search for something>" --keywords=fundraise,nonprofit,charity --out=./out.txt
 ```
-
 Badabing, badaboom
-
 
 <hr>
 
