@@ -9,12 +9,14 @@ use clap::{Arg, App};
 use indicatif::ProgressBar;
 use std::fs::File;
 use std::io::Write;
+use std::time::Instant;
 use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
 
 
 fn main() {
+    let started = Instant::now();
     let matches = App::new("yelp-scraper")
                     .version("0.1")
                     .about("Scrapes yelp reviews")
@@ -83,6 +85,8 @@ fn main() {
     table.to_csv(out).unwrap();
     println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
     println!("Output file at {}", out_path);
+    let time_elapsed = started.elapsed();
+    println!("Time elasped: {}:{}", time_elapsed.as_secs() / 60, time_elapsed.as_secs() % 60);
 }
 
 
