@@ -7,3 +7,4 @@ authors = ["Cindy <czwang@bu.edu>"]
 reqwest = "0.8.5"
 scraper = "0.5.0"
 prettytable-rs = "0.6.7"
+clap = "2.30.0"

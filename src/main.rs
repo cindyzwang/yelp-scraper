@@ -2,20 +2,43 @@
 extern crate prettytable;
 extern crate reqwest;
 extern crate scraper;
+extern crate clap;
 
-use prettytable::Table;
+use clap::{Arg, App};
 use std::fs::File;
+use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
 
 
 fn main() {
-    let mut table = Table::new();
-    let out = File::create("./out.txt").unwrap();
-
-    let domain: &str = "https://www.yelp.com";
-    let init_query: &str = "/search?find_desc=Food&find_loc=San+Francisco,+CA";
+    let matches = App::new("yelp-scraper")
+                    .version("0.1")
+                    .about("Scrapes yelp reviews")
+                    .arg(Arg::with_name("url")
+                            .short("u")
+                            .long("url")
+                            .value_name("URL")
+                            .help("The url you get when you make a search on yelp. Please wrap in quotation marks")
+                            .required(true))
+                    .arg(Arg::with_name("output")
+                            .short("o")
+                            .long("output")
+                            .value_name("OUTPUT PATH")
+                            .help("Where you want the output file to go")
+                            .required(false))
+                    .get_matches();
     
+    let domain: &str = "https://www.yelp.com";
+    let url = matches.value_of("url").unwrap();
+    let start_index = url.find("/search?").unwrap();
+    let init_query = &url[start_index..];
+
+    let out_path = matches.value_of("output").unwrap_or("./out.txt");
+
+    let mut table = Table::new();
+    let out = File::create(out_path).unwrap();
+
     let mut yelp_business_links = vec![];
     let client = Client::new();
     get_yelp_index_links(&client, domain, init_query, &mut yelp_business_links);
@@ -27,6 +50,7 @@ fn main() {
 
     table.printstd();
     table.to_csv(out).unwrap();
+    println!("Output file at {}", out_path);
 }
 
 fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: &mut Vec<(String, String)>) {
