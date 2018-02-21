@@ -1,22 +1,21 @@
-#[macro_use]
-extern crate prettytable;
+#[macro_use] extern crate prettytable;
 extern crate reqwest;
 extern crate scraper;
 extern crate clap;
 extern crate indicatif;
+extern crate serde;
 extern crate serde_json;
+#[macro_use] extern crate serde_derive;
 
 use clap::{Arg, App};
-// use indicatif::ProgressBar;
+use indicatif::ProgressBar;
 use std::fs::File;
-// use std::io::Write;
+use std::io::Write;
 use std::time::Instant;
 use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
 use reqwest::header::{Authorization, Bearer};
-use serde_json::{Value, Error};
-
 
 fn main() {
     let started = Instant::now();
@@ -49,15 +48,14 @@ fn main() {
                     .get_matches();
 
     let url_arg = matches.value_of("url").expect("URL is required");
-    // strip off the "&ns=1"
+    // strip off the "&ns=1" if it is there
     let url = match url_arg.rfind("&ns=1") {
         Some(v) => url_arg[..v].to_owned(),
         None => url_arg.to_owned(),
     };
 
     let start_index = url.find("?").expect("Your URL did not have a search query");
-    let init_query = &url[start_index + 1..];
-
+    let init_query = &url[start_index + 1..].replace("find_desc", "term").replace("find_loc", "location");
     let out_path = matches.value_of("output").unwrap_or("./out.txt");
 
     let keywords_arg = matches.values_of("keywords");
@@ -71,53 +69,103 @@ fn main() {
 
     let mut yelp_business_links = vec![];
     let client = Client::new();
-    get_yelp_index_links(&client, init_query, &mut yelp_business_links);
+    get_yelp_index_links(&client, init_query, 0, &mut yelp_business_links);
 
-    // println!();
-    // let bar = ProgressBar::new(yelp_business_links.len() as u64);
-    // for link in yelp_business_links {
-    //     let num = search_reviews(&client, &link.1, &keywords);
-    //     table.add_row(row![link.0, link.1, num]);
-    //     bar.inc(1);
-    // }
-    // bar.finish();
+    println!();
+    let bar = ProgressBar::new(yelp_business_links.len() as u64);
+    for link in yelp_business_links {
+        let num = search_reviews(&client, &link.1, &keywords);
+        table.add_row(row![link.0, link.1, num]);
+        bar.inc(1);
+    }
+    bar.finish();
 
-    // table.printstd();
-    // write!(out, "{:?}\n", keywords).expect("Failed to write to file");
-    // table.to_csv(out).expect("Failed to write to file");
-    // println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
-    // println!("Output file at {}", out_path);
-    // let time_elapsed = started.elapsed();
-    // println!("Time elasped: {}:{:02}", time_elapsed.as_secs() / 60, time_elapsed.as_secs() % 60);
+    table.printstd();
+    write!(out, "{:?}\n", keywords).expect("Failed to write to file");
+    table.to_csv(out).expect("Failed to write to file");
+    println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
+    println!("Output file at {}", out_path);
+    let time_elapsed = started.elapsed();
+    println!("Time elasped: {}:{:02}", time_elapsed.as_secs() / 60, time_elapsed.as_secs() % 60);
 }
 
 
-fn get_yelp_index_links(client: &Client, query: &str, yelp_links: &mut Vec<(String, String)>) {
-    let url = "https://api.yelp.com/v3/businesses/search?".to_owned() + query;
+fn get_yelp_index_links(client: &Client, query: &str, start: u32, yelp_links: &mut Vec<(String, String)>) {
+    let url = "https://api.yelp.com/v3/businesses/search?limit=50&offset=".to_owned() + &start.to_string() + "&" + query;
     let mut resp = client.get(&url).header(Authorization(
         Bearer {
             token: "YTlZS9bCu0CldX0lXgJjuX489zgkFgbt5qniruI1RGffZbRX2_UhtitJ1tGmTldgkJ59nTKNtY1roSwAXaDPeLJ8PjT3MvghbQgys8G2W-z_QUhrn038qsJZSbqMWnYx".to_owned()     
         }
     )).send().unwrap();
     assert!(resp.status().is_success());
-    println!("{:?}", resp);
 
-    // let body = resp.text().expect("Could not get document for index page");
-    // println!("{}", body);
-    // let fragment = Html::parse_document(&body);
-    // let businesses = Selector::parse("li.regular-search-result a.biz-name").expect("Not a valid css selector");
+    #[derive(Debug, Deserialize)]
+    struct Category {
+        alias: String,
+        title: String,
+    }
 
-    // for business in fragment.select(&businesses) {
-    //     let business_name = business.text().collect::<Vec<_>>()[0].trim();
+    #[derive(Debug, Deserialize)]
+    struct Coordinates {
+        latitude: f64,
+        longitude: f64,
+    }
 
-    //     // get the business's yelp page
-    //     if let Some(rel_path) = business.value().attr("href") {
-    //         if let Some(end_index) = rel_path.rfind('?') {
-    //             let business_yelp_link = domain.to_owned() + &rel_path[0..end_index];
-    //             yelp_links.push((business_name.to_owned(), business_yelp_link));
-    //         }
-    //     }
-    // }
+    #[derive(Debug, Deserialize)]
+    struct Location {
+        city: String,
+        country: String,
+        address1: String,
+        address2: Option<String>,
+        address3: Option<String>,
+        state: String,
+        zip_code: String
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct Business {
+        rating: f32,
+        price: Option<String>,
+        phone: String,
+        id: String,
+        is_closed: bool,
+        categories: Vec<Category>,
+        review_count: u64,
+        name: String,
+        url: String,
+        coordinates: Coordinates,
+        image_url: String,
+        location: Location,
+        distance: f64,
+        transactions: Vec<String>
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct Region {
+        center: Coordinates,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct YelpIndex {
+        total: u32,
+        businesses: Vec<Business>,
+        region: Region,
+    }
+
+    let result: YelpIndex = resp.json().unwrap();
+
+    for business in result.businesses {
+        let name = business.name;
+        let url = match business.url.find('?') {
+            Some(v) => &business.url[..v],
+            None => &business.url,
+        };
+        yelp_links.push((name, url.to_owned()));
+    }
+
+    if start + 50 <  result.total && start + 50 < 1000 {
+        get_yelp_index_links(client, query, start + 50, yelp_links);
+    }
 }
 
 
