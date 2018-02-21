@@ -4,15 +4,18 @@ extern crate reqwest;
 extern crate scraper;
 extern crate clap;
 extern crate indicatif;
+extern crate serde_json;
 
 use clap::{Arg, App};
-use indicatif::ProgressBar;
+// use indicatif::ProgressBar;
 use std::fs::File;
-use std::io::Write;
+// use std::io::Write;
 use std::time::Instant;
 use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
+use reqwest::header::{Authorization, Bearer};
+use serde_json::{Value, Error};
 
 
 fn main() {
@@ -44,17 +47,16 @@ fn main() {
                             .required(false)
                             .takes_value(true))
                     .get_matches();
-    
-    let domain: &str = "https://www.yelp.com";
+
     let url_arg = matches.value_of("url").expect("URL is required");
     // strip off the "&ns=1"
     let url = match url_arg.rfind("&ns=1") {
-        Some(v) => url_arg[..v].to_owned() + "&rpp=40",
-        None => url_arg.to_owned() + "&rpp=40",
+        Some(v) => url_arg[..v].to_owned(),
+        None => url_arg.to_owned(),
     };
 
-    let start_index = url.find("/search?").expect("Your URL did not have a search query");
-    let init_query = &url[start_index..];
+    let start_index = url.find("?").expect("Your URL did not have a search query");
+    let init_query = &url[start_index + 1..];
 
     let out_path = matches.value_of("output").unwrap_or("./out.txt");
 
@@ -69,55 +71,53 @@ fn main() {
 
     let mut yelp_business_links = vec![];
     let client = Client::new();
-    get_yelp_index_links(&client, domain, init_query, &mut yelp_business_links);
+    get_yelp_index_links(&client, init_query, &mut yelp_business_links);
 
-    println!();
-    let bar = ProgressBar::new(yelp_business_links.len() as u64);
-    for link in yelp_business_links {
-        let num = search_reviews(&client, &link.1, &keywords);
-        table.add_row(row![link.0, link.1, num]);
-        bar.inc(1);
-    }
-    bar.finish();
+    // println!();
+    // let bar = ProgressBar::new(yelp_business_links.len() as u64);
+    // for link in yelp_business_links {
+    //     let num = search_reviews(&client, &link.1, &keywords);
+    //     table.add_row(row![link.0, link.1, num]);
+    //     bar.inc(1);
+    // }
+    // bar.finish();
 
-    table.printstd();
-    write!(out, "{:?}\n", keywords).expect("Failed to write to file");
-    table.to_csv(out).expect("Failed to write to file");
-    println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
-    println!("Output file at {}", out_path);
-    let time_elapsed = started.elapsed();
-    println!("Time elasped: {}:{:02}", time_elapsed.as_secs() / 60, time_elapsed.as_secs() % 60);
+    // table.printstd();
+    // write!(out, "{:?}\n", keywords).expect("Failed to write to file");
+    // table.to_csv(out).expect("Failed to write to file");
+    // println!("\nSearched Yelp reviews for keywords: {:?}", keywords);
+    // println!("Output file at {}", out_path);
+    // let time_elapsed = started.elapsed();
+    // println!("Time elasped: {}:{:02}", time_elapsed.as_secs() / 60, time_elapsed.as_secs() % 60);
 }
 
 
-fn get_yelp_index_links(client: &Client, domain: &str, query: &str, yelp_links: &mut Vec<(String, String)>) {
-    let url = domain.to_owned() + query;
-    let mut resp = client.get(&url).send().expect("Connection error: index page");
+fn get_yelp_index_links(client: &Client, query: &str, yelp_links: &mut Vec<(String, String)>) {
+    let url = "https://api.yelp.com/v3/businesses/search?".to_owned() + query;
+    let mut resp = client.get(&url).header(Authorization(
+        Bearer {
+            token: "YTlZS9bCu0CldX0lXgJjuX489zgkFgbt5qniruI1RGffZbRX2_UhtitJ1tGmTldgkJ59nTKNtY1roSwAXaDPeLJ8PjT3MvghbQgys8G2W-z_QUhrn038qsJZSbqMWnYx".to_owned()     
+        }
+    )).send().unwrap();
     assert!(resp.status().is_success());
+    println!("{:?}", resp);
 
-    let body = resp.text().expect("Could not get document for index page");
-    let fragment = Html::parse_document(&body);
-    let businesses = Selector::parse("li.regular-search-result a.biz-name").expect("Not a valid css selector");
+    // let body = resp.text().expect("Could not get document for index page");
+    // println!("{}", body);
+    // let fragment = Html::parse_document(&body);
+    // let businesses = Selector::parse("li.regular-search-result a.biz-name").expect("Not a valid css selector");
 
-    for business in fragment.select(&businesses) {
-        let business_name = business.text().collect::<Vec<_>>()[0].trim();
+    // for business in fragment.select(&businesses) {
+    //     let business_name = business.text().collect::<Vec<_>>()[0].trim();
 
-        // get the business's yelp page
-        if let Some(rel_path) = business.value().attr("href") {
-            if let Some(end_index) = rel_path.rfind('?') {
-                let business_yelp_link = domain.to_owned() + &rel_path[0..end_index];
-                yelp_links.push((business_name.to_owned(), business_yelp_link));
-            }
-        }
-    }
-
-    // do it again on the next page
-    let next_page_selector = Selector::parse("div.search-pagination a.next.pagination-links_anchor").expect("Not a valid css selector");
-    for next_page_link in fragment.select(&next_page_selector) {
-        if let Some(rel) = next_page_link.value().attr("href") {
-            get_yelp_index_links(client, domain, &rel, yelp_links);
-        }
-    }
+    //     // get the business's yelp page
+    //     if let Some(rel_path) = business.value().attr("href") {
+    //         if let Some(end_index) = rel_path.rfind('?') {
+    //             let business_yelp_link = domain.to_owned() + &rel_path[0..end_index];
+    //             yelp_links.push((business_name.to_owned(), business_yelp_link));
+    //         }
+    //     }
+    // }
 }
 
 
