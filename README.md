@@ -32,3 +32,9 @@ Badabing, badaboom
 
 ### v0.1.0 MVP:
 - [x] accept arguments at run time: initial url, output path, keywords
+
+
+### v1.0.0 MVP:
+- [ ] make sure the Yelp platforms query parameters map to the api query parameters
+- [x] default to using just the business data
+- [x] provide option to opt in to the web scraper
