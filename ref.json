@@ -1,0 +1,16 @@
+{
+    "find_desc": "term",
+    "cflt": "categories",
+    "sortby": "sort_by",
+    "open_now": "open_at",
+    "open_time": "open_at",
+    "l=p:": "location",
+    "l=g:(1)": "latitude",
+    "l=g:(2)": "longitude",
+    "attrs": "attributes",
+    "not allowed": [
+        "limit",
+        "offset",
+        "locale"
+    ]
+}

@@ -1,6 +1,4 @@
 ## What it do
-TL;DR: Scrape through Yelp reviews for keywords, count em up, get a list.
-
 Search for something on Yelp, you will get a URL with all of your search paramaters (`...yelp.com/search?...`).
 This will start there, grab all of the links to the individual business pages on Yelp (which I get through the API) and then...
 
@@ -65,5 +63,12 @@ cargo run -- --url="<some yelp url you get when you search for something>" --cra
 
 ### v1.0.0 MVP:
 - [ ] make sure the Yelp platforms query parameters map to the api query parameters
+    - [x] term
+    - [x] location: neighborhoods, lat/lon/radius
+    - [x] categories
+    - [x] price range
+    - [ ] features
+    - [ ] open_at: figure out how they're doing UNIX time
+
 - [x] default to using just the business data
 - [x] provide option to opt in to the web scraper
