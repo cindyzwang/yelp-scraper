@@ -60,7 +60,7 @@ fn main() {
     let url_arg = matches.value_of("url").expect("URL is required");  // domain + query
     let _start_index = url_arg.find("?").expect("Your URL did not have a search query");
     let api_url = api_ify(&url_arg);                                  // domain + api query
-    println!("api_url : {}", api_url);
+    println!("\n\nAPI url: {}", api_url);
 
     let out_path = matches.value_of("output").unwrap_or("./out.txt");
 
@@ -81,7 +81,7 @@ fn main() {
         _ => true,
     };
     if crawl {
-        let api_query_string = &url_arg[.._start_index];
+        let api_query_string = &api_url[_start_index..];
         get_yelp_index_links(&client, &api_query_string, 0, &mut yelp_business_links);
         println!();
         let bar = ProgressBar::new(yelp_business_links.len() as u64);
@@ -94,7 +94,6 @@ fn main() {
     } else {
         let parsed_url = Url::parse(&api_url).unwrap();
         let mut hash_query: HashMap<_, _> = parsed_url.query_pairs().into_owned().collect();
-        println!("\nYour query:");
         println!("{:?}\n", hash_query);
 
         let search_terms = hash_query.remove("term").expect("Search query must have 'term=<serach term>'");
@@ -207,7 +206,7 @@ fn api_ify(original: &str) -> String {
 }
 
 
-fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, i64) {
+fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, u32) {
     // yelp uses the NE and SW corners of the map as lonNE,latNE,lonSW,latSW
     let (lon1, lat1) = corner1;
     let (lon2, lat2) = corner2;
@@ -223,7 +222,7 @@ fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, i6
     let mid_lat_rad = lat.to_radians();
     let mid_lon_rad = lon.to_radians();
     let a = mid_lat_rad.sin().powi(2) + lat1_rad.cos() * lat2_rad.cos() * mid_lon_rad.sin().powi(2);
-    let c = (2.0 * a.sqrt().atan2((1.0 - a).sqrt())).round() as i64;
+    let c = (2.0 * a.sqrt().atan2((1.0 - a).sqrt())).round() as u32;
     let d = min(6373000 * c, 40000);  // yelp's max is 40000 m
 
     (lat, lon, d)
