@@ -190,6 +190,15 @@ fn api_ify(original: &str) -> String {
         }
     }
 
+    // need new scope because of borrow checker
+    if query_map.contains_key("attributes") {
+        let attrs_str = query_map.get_mut("attributes").unwrap();
+        *attrs_str = attrs_str.split(',').collect::<Vec<&str>>().join("");
+    }
+    if query_map["attributes"].is_empty() {
+        query_map.remove("attributes");
+    }
+
     
     let prices_str = prices.join(",");
     query_map.insert("price".to_owned(), prices_str);
