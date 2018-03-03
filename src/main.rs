@@ -195,7 +195,7 @@ fn api_ify(original: &str) -> String {
         let attrs_str = query_map.get_mut("attributes").unwrap();
         *attrs_str = attrs_str.split(',').collect::<Vec<&str>>().join("");
     }
-    if query_map["attributes"].is_empty() {
+    if query_map.contains_key("attributes") && query_map["attributes"].is_empty() {
         query_map.remove("attributes");
     }
 
