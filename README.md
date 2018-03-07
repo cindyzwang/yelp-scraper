@@ -74,7 +74,7 @@ cargo run -- --url="<some yelp url you get when you search for something>" --cra
     - [x] categories
     - [x] price range
     - [ ] features
-    - [ ] open_at: figure out how they're doing UNIX time
+    - [x] open_at: figure out how they're doing UNIX time
 
 - [x] default to using just the business data
 - [x] provide option to opt in to the web scraper
