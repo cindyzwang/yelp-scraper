@@ -13,7 +13,8 @@ use std::collections::HashMap;
 use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
-use std::time::Instant;
+use std::time::{Instant, Duration};
+use std::thread::sleep;
 use prettytable::Table;
 use scraper::{Html, Selector};
 use reqwest::Client;
@@ -58,8 +59,8 @@ fn main() {
                     .get_matches();
 
     let url_arg = matches.value_of("url").expect("URL is required");  // domain + query
-    let _start_index = url_arg.find("?").expect("Your URL did not have a search query");
     let api_url = api_ify(&url_arg);                                  // domain + api query
+    let _start_index = api_url.find("?").expect("Your URL did not have a search query");
     println!("\n\nAPI url: {}", api_url);
 
     let out_path = matches.value_of("output").unwrap_or("./out.txt");
@@ -81,7 +82,7 @@ fn main() {
         _ => true,
     };
     if crawl {
-        let api_query_string = &api_url[_start_index..];
+        let api_query_string = &api_url[_start_index + 2..];
         get_yelp_index_links(&client, &api_query_string, 0, &mut yelp_business_links);
         println!();
         let bar = ProgressBar::new(yelp_business_links.len() as u64);
@@ -215,7 +216,7 @@ fn api_ify(original: &str) -> String {
 }
 
 
-fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, u32) {
+fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, i32) {
     // yelp uses the NE and SW corners of the map as lonNE,latNE,lonSW,latSW
     let (lon1, lat1) = corner1;
     let (lon2, lat2) = corner2;
@@ -228,11 +229,12 @@ fn get_lat_lon_radius(corner1: (f64, f64), corner2: (f64, f64)) -> (f64, f64, u3
     // https://andrew.hedges.name/experiments/haversine/
     let lat1_rad = lat1.to_radians();
     let lat2_rad = lat2.to_radians();
-    let mid_lat_rad = lat.to_radians();
-    let mid_lon_rad = lon.to_radians();
-    let a = mid_lat_rad.sin().powi(2) + lat1_rad.cos() * lat2_rad.cos() * mid_lon_rad.sin().powi(2);
-    let c = (2.0 * a.sqrt().atan2((1.0 - a).sqrt())).round() as u32;
-    let d = min(6373000 * c, 40000);  // yelp's max is 40000 m
+    let d_lat = (lat2 - lat1).to_radians();
+    let d_lon = (lon2 - lon1).to_radians();
+    let a = d_lat.sin().powi(2) + lat1_rad.cos() * lat2_rad.cos() * d_lon.sin().powi(2);
+    // earth's radius is 6371 km
+    let c = (6_371_000.0 * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())).round() as i32;
+    let d = min(c, 40000);  // yelp's max is 40000 m
 
     (lat, lon, d)
 }
@@ -337,6 +339,7 @@ fn get_yelp_index_links(client: &Client, query: &str, start: u32, yelp_links: &m
 fn search_reviews(client: &Client, yelp_business_page_url: &str, keywords: &Vec<&str>) -> u32 {
     let mut count: u32 = 0;
     for keyword in keywords.iter() {
+        sleep(Duration::from_millis(500));
         let url = yelp_business_page_url.to_owned() + "?q=" + keyword;
         let mut resp = client.get(&url).send().expect("Connection error: business page");
         let body = resp.text().expect("Could not get document for business page");
